@@ -8,6 +8,7 @@ import '../widgets/recipe_card.dart';
 import '../widgets/rating_dialog.dart';
 import '../widgets/buttom_nav_bar.dart';
 import '../screens/favorites_page.dart';
+import '../widgets/recipe_filters.dart';
 
 class RecipeListPage extends StatefulWidget {
   @override
@@ -20,6 +21,8 @@ class _RecipeListPageState extends State<RecipeListPage>
   final RecipeService _recipeService = RecipeService();
   List<Recipe> _allRecipes = [];
   List<Recipe> _filteredRecipes = [];
+  String? _selectedTimeFilter;
+  double? _selectedRating;
   String? _selectedTag;
   List<String> _availableTags = [];
   late AnimationController _animationController;
@@ -40,6 +43,11 @@ class _RecipeListPageState extends State<RecipeListPage>
     _checkAuthAndLoadRecipes();
     _animationController.forward();
     _loadFavoriteStatus();
+
+    // Add listener for search text changes
+    _searchController.addListener(() {
+      _filterRecipes(_searchController.text);
+    });
   }
 
   @override
@@ -64,12 +72,11 @@ class _RecipeListPageState extends State<RecipeListPage>
   }
 
   Future<void> _loadRecipes() async {
-    final recipes = await _recipeService.loadRecipes();
-
-    // Load favorite status for each recipe
-    for (var recipe in recipes) {
-      await _recipeService.loadFavoriteStatus(recipe);
-    }
+    final recipes = await _recipeService.loadRecipesWithFilters(
+      timeFilter: _selectedTimeFilter,
+      ratingFilter: _selectedRating,
+      tagFilter: _selectedTag,
+    );
 
     setState(() {
       _allRecipes = recipes;
@@ -80,6 +87,9 @@ class _RecipeListPageState extends State<RecipeListPage>
         tags.addAll(recipe.tags);
       }
       _availableTags = tags.toList()..sort();
+
+      // Re-apply search filter after loading recipes
+      _filterRecipes(_searchController.text);
     });
   }
 
@@ -97,21 +107,68 @@ class _RecipeListPageState extends State<RecipeListPage>
 
   void _filterRecipes(String query) {
     setState(() {
-      _filteredRecipes = _allRecipes.where((recipe) {
-        bool matchesSearch =
-            recipe.name.toLowerCase().contains(query.toLowerCase());
-        bool matchesTag =
-            _selectedTag == null || recipe.tags.contains(_selectedTag);
-        return matchesSearch && matchesTag;
-      }).toList();
+      if (query.isEmpty) {
+        _filteredRecipes = _allRecipes.where((recipe) {
+          return _selectedTag == null || recipe.tags.contains(_selectedTag);
+        }).toList();
+      } else {
+        // Normalize the search query by converting to lowercase
+        final normalizedQuery = query.toLowerCase().trim();
+
+        _filteredRecipes = _allRecipes.where((recipe) {
+          // Check recipe name (both Khmer and any other text)
+          bool matchesName =
+              recipe.name.toLowerCase().contains(normalizedQuery);
+
+          // Check recipe description
+          bool matchesDescription =
+              recipe.description?.toLowerCase().contains(normalizedQuery) ??
+                  false;
+
+          // Check ingredients
+          bool matchesIngredients = recipe.ingredients.any((ingredient) {
+            return ingredient.toLowerCase().contains(normalizedQuery);
+          });
+
+          // Check if any tags match (optional, but useful for Khmer tag searching)
+          bool matchesTags = recipe.tags
+              .any((tag) => tag.toLowerCase().contains(normalizedQuery));
+
+          // Combine all search conditions
+          bool matchesSearch = matchesName ||
+              matchesDescription ||
+              matchesIngredients ||
+              matchesTags;
+
+          // Apply tag filter if selected
+          bool matchesTag =
+              _selectedTag == null || recipe.tags.contains(_selectedTag);
+
+          return matchesSearch && matchesTag;
+        }).toList();
+      }
     });
   }
 
-  void _filterByTag(String? tag) {
+  void _handleTimeFilter(String? time) {
+    setState(() {
+      _selectedTimeFilter = time;
+    });
+    _loadRecipes();
+  }
+
+  void _handleRatingFilter(double? rating) {
+    setState(() {
+      _selectedRating = rating;
+    });
+    _loadRecipes();
+  }
+
+  void _handleTagFilter(String? tag) {
     setState(() {
       _selectedTag = tag;
-      _filterRecipes(_searchController.text);
     });
+    _loadRecipes();
   }
 
   Future<void> _loadFavoriteStatus() async {
@@ -130,7 +187,7 @@ class _RecipeListPageState extends State<RecipeListPage>
       return newStatus;
     } catch (e) {
       print('Error toggling favorite: $e');
-      return recipe.isFavorite; // Return current status if error
+      return recipe.isFavorite;
     }
   }
 
@@ -265,6 +322,26 @@ class _RecipeListPageState extends State<RecipeListPage>
                             color: Colors.grey[600],
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'ស្វែងរកមុខម្ហូប...',
+                            hintStyle: const TextStyle(fontFamily: 'Chenla'),
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: BorderSide(color: Colors.green[700]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: BorderSide(
+                                  color: Colors.green[700]!, width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -274,86 +351,56 @@ class _RecipeListPageState extends State<RecipeListPage>
             ),
           ),
           SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.green.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => DraggableScrollableSheet(
+                      initialChildSize: 0.7,
+                      minChildSize: 0.5,
+                      maxChildSize: 0.95,
+                      builder: (_, controller) => Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(20)),
                         ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'ស្វែងរកមុខម្ហូប...',
-                        prefixIcon:
-                            Icon(Icons.search, color: Colors.green[700]),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.all(16),
-                        hintStyle: TextStyle(
-                          fontFamily: 'Chenla',
-                          color: Colors.grey[400],
+                        child: RecipeFilters(
+                          searchController: _searchController,
+                          selectedTimeFilter: _selectedTimeFilter,
+                          selectedRating: _selectedRating,
+                          selectedTag: _selectedTag,
+                          availableTags: _availableTags,
+                          onSearchChanged: _filterRecipes,
+                          onTimeFilterSelected: _handleTimeFilter,
+                          onRatingSelected: _handleRatingFilter,
+                          onTagSelected: _handleTagFilter,
                         ),
                       ),
-                      onChanged: _filterRecipes,
                     ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[700],
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Row(
-                      children: [
-                        FilterChip(
-                          label: Text(
-                            'ទាំងអស់',
-                            style: TextStyle(
-                              fontFamily: 'Chenla',
-                              color: _selectedTag == null
-                                  ? Colors.white
-                                  : Colors.black,
-                            ),
-                          ),
-                          selected: _selectedTag == null,
-                          selectedColor: Colors.green[700],
-                          onSelected: (bool selected) {
-                            if (selected) _filterByTag(null);
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        ..._availableTags
-                            .map((tag) => Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: FilterChip(
-                                    label: Text(
-                                      tag,
-                                      style: TextStyle(
-                                        fontFamily: 'Chenla',
-                                        color: _selectedTag == tag
-                                            ? Colors.white
-                                            : Colors.black,
-                                      ),
-                                    ),
-                                    selected: _selectedTag == tag,
-                                    selectedColor: Colors.green[700],
-                                    backgroundColor: Colors.green[50],
-                                    onSelected: (bool selected) {
-                                      _filterByTag(selected ? tag : null);
-                                    },
-                                  ),
-                                ))
-                            .toList(),
-                      ],
-                    ),
+                ),
+                icon: const Icon(Icons.filter_list,
+                    size: 20, color: Colors.white),
+                label: const Text(
+                  'Filter',
+                  style: TextStyle(
+                    fontFamily: 'Chenla',
+                    color: Colors.white,
+                    fontSize: 15,
                   ),
-                ],
+                ),
               ),
             ),
           ),

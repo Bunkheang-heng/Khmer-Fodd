@@ -12,7 +12,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: Text(
+      title: const Text(
         'មុខម្ហូបខ្មែរ', 
         style: TextStyle(
           fontFamily: 'Chenla',
@@ -31,15 +31,15 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Theme.of(context).primaryColor,
       actions: [
         IconButton(
-          icon: Icon(Icons.menu, size: 28),
+          icon: const Icon(Icons.menu, size: 28),
           onPressed: onTagsMenuPressed,
         ),
         IconButton(
-          icon: Icon(Icons.smart_toy, size: 28),
+          icon: const Icon(Icons.smart_toy, size: 28),
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => ChatPage()),
+              MaterialPageRoute(builder: (context) => const ChatPage()),
             );
           },
         ),

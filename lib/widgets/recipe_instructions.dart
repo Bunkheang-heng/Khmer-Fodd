@@ -10,7 +10,7 @@ class RecipeInstructions extends StatelessWidget {
   String? _getYoutubeVideoId(String url) {
     final uri = Uri.tryParse(url);
     if (uri == null) return null;
-    
+
     if (uri.host == 'youtu.be') {
       return uri.pathSegments.first;
     } else if (uri.host.contains('youtube.com')) {
@@ -23,16 +23,18 @@ class RecipeInstructions extends StatelessWidget {
     final videoId = _getYoutubeVideoId(videoUrl);
     if (videoId == null) return Container();
 
+    final controller = YoutubePlayerController(
+      initialVideoId: videoId,
+      flags: const YoutubePlayerFlags(
+        autoPlay: false,
+        mute: false,
+        enableCaption: true,
+      ),
+    );
+
     return YoutubePlayerBuilder(
       player: YoutubePlayer(
-        controller: YoutubePlayerController(
-          initialVideoId: videoId,
-          flags: const YoutubePlayerFlags(
-            autoPlay: false,
-            mute: false,
-            enableCaption: true,
-          ),
-        ),
+        controller: controller,
         showVideoProgressIndicator: true,
         progressIndicatorColor: Colors.red,
         progressColors: const ProgressBarColors(
@@ -63,8 +65,94 @@ class RecipeInstructions extends StatelessWidget {
     );
   }
 
+  Widget _buildInstructionItem(int index, String instruction) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        elevation: 2,
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {}, // Add interaction feedback
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.green.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.green.shade600,
+                        Colors.green.shade400,
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.withOpacity(0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${index + 1}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    instruction,
+                    style: TextStyle(
+                      fontFamily: 'Koulen',
+                      fontSize: 16,
+                      height: 1.5,
+                      color: Colors.green.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final headerDecoration = BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Colors.green.shade700, Colors.green.shade500],
+      ),
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.green.withOpacity(0.3),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -86,20 +174,9 @@ class RecipeInstructions extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.green.shade700, Colors.green.shade500],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.green.withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: headerDecoration,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -128,75 +205,17 @@ class RecipeInstructions extends StatelessWidget {
                 _buildVideoPlayer(recipe.videoUrl!),
               ],
               const SizedBox(height: 16),
-              ...recipe.instructions.asMap().entries.map((entry) => Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Material(
-                  elevation: 2,
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.white,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {}, // Add interaction feedback
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.green.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.green.shade600,
-                                  Colors.green.shade400,
-                                ],
-                              ),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.green.withOpacity(0.3),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${entry.key + 1}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Text(
-                              entry.value,
-                              style: TextStyle(
-                                fontFamily: 'Koulen',
-                                fontSize: 16,
-                                height: 1.5,
-                                color: Colors.green.shade900,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              )),
+              ListView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                itemCount: recipe.instructions.length,
+                itemBuilder: (context, index) {
+                  return _buildInstructionItem(
+                    index,
+                    recipe.instructions[index],
+                  );
+                },
+              ),
             ],
           ),
         ),

@@ -149,4 +149,61 @@ class RecipeService {
       return [];
     }
   }
+
+  Future<List<Recipe>> loadRecipesWithFilters({
+    String? timeFilter,
+    double? ratingFilter,
+    String? tagFilter,
+  }) async {
+    try {
+      Query query = _firestore.collection('recipes');
+
+      // Default sorting if no time filter is selected
+      if (timeFilter == null || timeFilter == 'Newest') {
+        query = query.orderBy('createdAt', descending: true);
+      } else {
+        switch (timeFilter) {
+          case 'Oldest':
+            query = query.orderBy('createdAt', descending: false);
+            break;
+          case 'Trading':
+            query = query.orderBy('favoriteCount', descending: true).orderBy(
+                'createdAt',
+                descending: true); // Secondary sort for equal counts
+            break;
+        }
+      }
+
+      // Execute base query
+      var snapshot = await query.get();
+      var recipes = snapshot.docs
+          .map((doc) =>
+              Recipe.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+
+      // Apply tag filter if selected
+      if (tagFilter != null && tagFilter != 'All') {
+        recipes = recipes
+            .where((recipe) => recipe.tags
+                .any((tag) => tag.toLowerCase() == tagFilter.toLowerCase()))
+            .toList();
+      }
+
+      // Apply rating filter if selected
+      if (ratingFilter != null) {
+        recipes =
+            recipes.where((recipe) => recipe.rating >= ratingFilter).toList();
+      }
+
+      // Load favorite status for filtered recipes
+      for (var recipe in recipes) {
+        await loadFavoriteStatus(recipe);
+      }
+
+      return recipes;
+    } catch (e) {
+      print('Error loading recipes with filters: $e');
+      return [];
+    }
+  }
 }

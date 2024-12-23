@@ -16,10 +16,14 @@ class BottomNavBar extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+            blurRadius: 15,
+            offset: const Offset(0, -3),
           ),
         ],
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(25),
+          topRight: Radius.circular(25),
+        ),
       ),
       child: SafeArea(
         child: Padding(
@@ -27,8 +31,9 @@ class BottomNavBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              IconButton(
-                icon: const Icon(Icons.home_outlined),
+              _buildNavButton(
+                context,
+                icon: Icons.home_rounded,
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
@@ -36,18 +41,20 @@ class BottomNavBar extends StatelessWidget {
                   );
                 },
               ),
-              IconButton(
-                icon: const Icon(Icons.bookmark_border),
+              _buildNavButton(
+                context,
+                icon: Icons.bookmark_rounded,
                 onPressed: () {
                   Navigator.push(
-                    context, 
+                    context,
                     MaterialPageRoute(builder: (context) => const FavoritesPage()),
                   );
                 },
               ),
               _buildCenterButton(context),
-              IconButton(
-                icon: const Icon(Icons.notifications_none),
+              _buildNavButton(
+                context,
+                icon: Icons.notifications_rounded,
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -55,8 +62,9 @@ class BottomNavBar extends StatelessWidget {
                   );
                 },
               ),
-              IconButton(
-                icon: const Icon(Icons.person_outline),
+              _buildNavButton(
+                context,
+                icon: Icons.person_rounded,
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -71,6 +79,29 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
+  Widget _buildNavButton(
+    BuildContext context, {
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.transparent,
+      ),
+      child: IconButton(
+        icon: Icon(
+          icon,
+          size: 28,
+          color: Theme.of(context).primaryColor,
+        ),
+        onPressed: onPressed,
+        splashColor: Colors.green[100],
+        highlightColor: Colors.green[50],
+      ),
+    );
+  }
+
   Widget _buildCenterButton(BuildContext context) {
     return GestureDetector(
       onTap: () {
@@ -80,16 +111,30 @@ class BottomNavBar extends StatelessWidget {
         );
       },
       child: Container(
-        width: 48,
-        height: 48,
-        decoration: const BoxDecoration(
-          color: Color(0xFF45B097),
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).primaryColor,
+              const Color(0xFF45B097),
+            ],
+          ),
           shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.green.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: const Icon(
-          Icons.smart_toy_outlined,
+          Icons.smart_toy_rounded,
           color: Colors.white,
-          size: 24,
+          size: 30,
         ),
       ),
     );

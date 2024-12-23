@@ -46,6 +46,7 @@ dependencies:
   webview_flutter: ^4.10.0
   provider: ^6.1.2
   loading_animation_widget: ^1.3.0
+  flutter_tts: ^3.8.5
 
 dev_dependencies:
   flutter_test:
@@ -101,12 +102,8 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
   assets:
-    - assets/persimmon-fruits-plateon-marble-table.jpg
-    - assets/background.png
-    - assets/image.png
+    - assets/logo.png
     - assets/Developer.png
-    - assets/ProfileBackground.png
-    - assets/image.jpg
     - assets/homebackground.png
     - assets/icon/google.png
     - assets/icon/facebook.png

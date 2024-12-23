@@ -1,11 +1,107 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../../models/recipe.dart';
 
-
-class RecipeDescription extends StatelessWidget {
+class RecipeDescription extends StatefulWidget {
   final Recipe recipe;
 
   const RecipeDescription({super.key, required this.recipe});
+
+  @override
+  State<RecipeDescription> createState() => _RecipeDescriptionState();
+}
+
+class _RecipeDescriptionState extends State<RecipeDescription> {
+  final FlutterTts flutterTts = FlutterTts();
+  bool isSpeaking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initTts();
+  }
+
+  Future<void> _initTts() async {
+    try {
+      await flutterTts.setLanguage('km-KH');
+      await flutterTts.setSpeechRate(0.5);
+      await flutterTts.setVolume(1.0);
+      await flutterTts.setPitch(1.0);
+
+      // Add engine configuration
+      await flutterTts.setEngine('com.google.android.tts');
+
+      // Check available engines
+      final engines = await flutterTts.getEngines;
+      debugPrint('Available engines: $engines');
+
+      // Check available languages
+      final languages = await flutterTts.getLanguages;
+      final isKhmerSupported = languages.contains('km-KH');
+
+      if (!isKhmerSupported) {
+        debugPrint('Khmer language is not supported on this device');
+        // Show a snackbar to inform the user
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Khmer language is not supported on this device'),
+            ),
+          );
+        }
+      }
+
+      flutterTts.setCompletionHandler(() {
+        setState(() {
+          isSpeaking = false;
+        });
+      });
+    } catch (e) {
+      debugPrint('TTS initialization failed: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to initialize TTS: $e'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _speak(String text) async {
+    try {
+      if (isSpeaking) {
+        await flutterTts.stop();
+        setState(() {
+          isSpeaking = false;
+        });
+      } else {
+        setState(() {
+          isSpeaking = true;
+        });
+        final result = await flutterTts.speak(text);
+        if (result == 1) {
+          // Speaking started successfully
+        } else {
+          setState(() {
+            isSpeaking = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('TTS speak failed: $e');
+      setState(() {
+        isSpeaking = false;
+      });
+      // Optionally show an error message to the user
+    }
+  }
+
+  @override
+  void dispose() {
+    flutterTts.stop();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,13 +139,14 @@ class RecipeDescription extends StatelessWidget {
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: const Row(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.description, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(
+                    const Icon(Icons.description, color: Colors.white),
+                    const SizedBox(width: 8),
+                    const Text(
                       'ការពិពណ៌នា:',
                       style: TextStyle(
                         fontSize: 22,
@@ -63,6 +160,15 @@ class RecipeDescription extends StatelessWidget {
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        isSpeaking ? Icons.stop_circle : Icons.play_circle,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => _speak(
+                          widget.recipe.description ?? 'គ្មានការពិពណ៌នា'),
                     ),
                   ],
                 ),
@@ -82,7 +188,7 @@ class RecipeDescription extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.all(12),
                 child: Text(
-                  recipe.description ?? 'គ្មានការពិពណ៌នា',
+                  widget.recipe.description ?? 'គ្មានការពិពណ៌នា',
                   style: TextStyle(
                     fontSize: 16,
                     fontFamily: 'Koulen',
